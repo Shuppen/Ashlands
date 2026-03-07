@@ -24,18 +24,20 @@ bool input_handle_event(InputState *inp, const SDL_Event *ev) {
         return true;
 
     case SDL_KEYDOWN:
-        if (ev->key.scancode < SDL_NUM_SCANCODES) {
-            if (!inp->keys_down[ev->key.scancode]) {
-                inp->keys_pressed[ev->key.scancode] = true;
+        if (ev->key.keysym.scancode < SDL_NUM_SCANCODES) {
+            SDL_Scancode scancode = ev->key.keysym.scancode;
+            if (!inp->keys_down[scancode]) {
+                inp->keys_pressed[scancode] = true;
             }
-            inp->keys_down[ev->key.scancode] = true;
+            inp->keys_down[scancode] = true;
         }
         return true;
 
     case SDL_KEYUP:
-        if (ev->key.scancode < SDL_NUM_SCANCODES) {
-            inp->keys_down[ev->key.scancode]     = false;
-            inp->keys_released[ev->key.scancode] = true;
+        if (ev->key.keysym.scancode < SDL_NUM_SCANCODES) {
+            SDL_Scancode scancode = ev->key.keysym.scancode;
+            inp->keys_down[scancode] = false;
+            inp->keys_released[scancode] = true;
         }
         return true;
 

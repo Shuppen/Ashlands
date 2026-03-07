@@ -7,6 +7,73 @@
  * They push results and return the result count.
  */
 #include "lua_api.h"
+
+#ifdef PLATFORM_WEB
+
+#include <stdint.h>
+#include <stdlib.h>
+
+LuaContext *lua_ctx_create(void) {
+    return calloc(1, sizeof(LuaContext));
+}
+
+void lua_ctx_destroy(LuaContext *ctx) {
+    free(ctx);
+}
+
+bool lua_ctx_load_file(LuaContext *ctx, const char *path) {
+    (void)ctx;
+    (void)path;
+    return false;
+}
+
+int lua_ctx_load_dir(LuaContext *ctx, const char *dir_path) {
+    (void)ctx;
+    (void)dir_path;
+    return 0;
+}
+
+void lua_ctx_set_world(LuaContext *ctx, void *world_state) {
+    (void)ctx;
+    (void)world_state;
+}
+
+void lua_api_register(LuaContext *ctx) {
+    (void)ctx;
+}
+
+void lua_api_set_ui_log(void (*fn)(const char *, uint32_t)) {
+    (void)fn;
+}
+
+bool lua_call_on_turn(LuaContext *ctx, int entity_id) {
+    (void)ctx;
+    (void)entity_id;
+    return false;
+}
+
+bool lua_call_on_death(LuaContext *ctx, int entity_id) {
+    (void)ctx;
+    (void)entity_id;
+    return false;
+}
+
+bool lua_call_on_see(LuaContext *ctx, int entity_id, int target_id) {
+    (void)ctx;
+    (void)entity_id;
+    (void)target_id;
+    return false;
+}
+
+bool lua_call_on_interact(LuaContext *ctx, int entity_id, int other_id) {
+    (void)ctx;
+    (void)entity_id;
+    (void)other_id;
+    return false;
+}
+
+#else
+
 #include "world.h"
 #include "ecs.h"
 
@@ -395,3 +462,5 @@ bool lua_call_on_interact(LuaContext *ctx, int entity_id, int other_id) {
     lua_pushinteger(ctx->L, other_id);
     return call_hook(ctx, "on_interact", 2);
 }
+
+#endif
