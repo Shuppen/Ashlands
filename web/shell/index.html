@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ashlands</title>
+    <style>
+        :root {
+            --bg: #120f0d;
+            --bg-accent: #241d18;
+            --panel: rgba(20, 16, 13, 0.88);
+            --panel-border: rgba(200, 184, 154, 0.2);
+            --text: #c8b89a;
+            --muted: #8e7c66;
+            --gold: #d4a853;
+            --gold-soft: #e8c86a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top, rgba(212, 168, 83, 0.12), transparent 34%),
+                linear-gradient(180deg, #1a1512 0%, var(--bg) 55%, #090807 100%);
+            color: var(--text);
+            font-family: "DejaVu Sans Mono", "Courier New", monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 45%),
+                repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 4px);
+            pointer-events: none;
+        }
+
+        #loading {
+            position: absolute;
+            z-index: 100;
+            min-width: min(88vw, 360px);
+            padding: 24px 22px;
+            text-align: center;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(10px);
+        }
+
+        #loading h1 {
+            font-size: clamp(1.9rem, 5vw, 2.6rem);
+            letter-spacing: 0.28em;
+            text-indent: 0.28em;
+            color: var(--gold);
+            margin-bottom: 0.55em;
+        }
+
+        #loading .subtitle {
+            font-size: 0.85rem;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        #loading .bar-outer {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-accent);
+            border-radius: 999px;
+            margin: 1.4em auto 0.8em;
+            overflow: hidden;
+        }
+
+        #loading .bar-inner {
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold), var(--gold-soft));
+            border-radius: 999px;
+            transition: width 0.25s ease;
+        }
+
+        #loading-status {
+            min-height: 1.3em;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        #loading.hidden {
+            display: none;
+        }
+
+        #canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 100vw;
+            max-height: 100vh;
+            max-height: 100dvh;
+            outline: none;
+        }
+
+        #touch-controls {
+            display: none;
+            position: fixed;
+            inset: auto 0 0;
+            height: 35vh;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .dpad {
+            position: absolute;
+            left: 10%;
+            bottom: 15%;
+            width: 140px;
+            height: 140px;
+            pointer-events: auto;
+        }
+
+        .dpad-btn,
+        .action-btn {
+            border: 1px solid rgba(200, 184, 154, 0.24);
+            background: rgba(200, 184, 154, 0.14);
+            color: rgba(222, 211, 189, 0.72);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(6px);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dpad-btn {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            pointer-events: auto;
+        }
+
+        .dpad-btn:active,
+        .action-btn:active {
+            background: rgba(212, 168, 83, 0.3);
+            border-color: rgba(212, 168, 83, 0.48);
+            color: #f3dec2;
+        }
+
+        .dpad-up {
+            top: 0;
+            left: 48px;
+        }
+
+        .dpad-down {
+            bottom: 0;
+            left: 48px;
+        }
+
+        .dpad-left {
+            top: 48px;
+            left: 0;
+        }
+
+        .dpad-right {
+            top: 48px;
+            right: 0;
+        }
+
+        .action-buttons {
+            position: absolute;
+            right: 10%;
+            bottom: 15%;
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .action-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #touch-controls {
+                display: block;
+            }
+        }
+
+        @media (max-height: 500px) {
+            .dpad,
+            .action-buttons {
+                transform: scale(0.8);
+                transform-origin: bottom center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <h1>ASHLANDS</h1>
+        <p class="subtitle">В пепельных пустошах нет героев</p>
+        <div class="bar-outer">
+            <div class="bar-inner" id="progress-bar"></div>
+        </div>
+        <p id="loading-status">Загрузка движка...</p>
+    </div>
+
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+    <div id="touch-controls">
+        <div class="dpad">
+            <div class="dpad-btn dpad-up" data-key="ArrowUp">▲</div>
+            <div class="dpad-btn dpad-down" data-key="ArrowDown">▼</div>
+            <div class="dpad-btn dpad-left" data-key="ArrowLeft">◄</div>
+            <div class="dpad-btn dpad-right" data-key="ArrowRight">►</div>
+        </div>
+        <div class="action-buttons">
+            <div class="action-btn" data-key="e">BAG</div>
+            <div class="action-btn" data-key="Space">ATK</div>
+        </div>
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        function simulate_key(code, type) {
+            const key_map = {
+                ArrowUp: { key: "ArrowUp", code: "ArrowUp", key_code: 38 },
+                ArrowDown: { key: "ArrowDown", code: "ArrowDown", key_code: 40 },
+                ArrowLeft: { key: "ArrowLeft", code: "ArrowLeft", key_code: 37 },
+                ArrowRight: { key: "ArrowRight", code: "ArrowRight", key_code: 39 },
+                Space: { key: " ", code: "Space", key_code: 32 },
+                e: { key: "e", code: "KeyE", key_code: 69 },
+                i: { key: "i", code: "KeyI", key_code: 73 }
+            };
+
+            const config = key_map[code] || { key: code, code: code, key_code: 0 };
+            const event = new KeyboardEvent(type, {
+                key: config.key,
+                code: config.code,
+                bubbles: true,
+                cancelable: true
+            });
+
+            Object.defineProperty(event, "keyCode", { get: () => config.key_code });
+            Object.defineProperty(event, "which", { get: () => config.key_code });
+
+            document.dispatchEvent(event);
+            if (Module && Module.canvas) {
+                Module.canvas.dispatchEvent(event);
+            }
+        }
+
+        document.querySelectorAll("[data-key]").forEach((button) => {
+            const key = button.dataset.key;
+            let repeat_timer = null;
+
+            const press = (event) => {
+                event.preventDefault();
+                clearInterval(repeat_timer);
+                simulate_key(key, "keydown");
+                repeat_timer = setInterval(() => simulate_key(key, "keydown"), 150);
+            };
+
+            const release = (event) => {
+                event.preventDefault();
+                clearInterval(repeat_timer);
+                repeat_timer = null;
+                simulate_key(key, "keyup");
+            };
+
+            button.addEventListener("touchstart", press, { passive: false });
+            button.addEventListener("touchend", release, { passive: false });
+            button.addEventListener("touchcancel", release, { passive: false });
+            button.addEventListener("mousedown", press);
+            button.addEventListener("mouseup", release);
+            button.addEventListener("mouseleave", release);
+        });
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.expand();
+            if (typeof tg.disableVerticalSwipes === "function") {
+                tg.disableVerticalSwipes();
+            }
+            tg.ready();
+            document.body.style.backgroundColor = "#1a1816";
+        }
+
+        var Module = {
+            canvas: document.getElementById("canvas"),
+            onRuntimeInitialized: function() {
+                document.getElementById("loading").classList.add("hidden");
+                Module.canvas.focus();
+            },
+            setStatus: function(text) {
+                const status = document.getElementById("loading-status");
+                const bar = document.getElementById("progress-bar");
+                const safe_text = text || "";
+                if (status) {
+                    status.textContent = safe_text || "Готово!";
+                }
+
+                const match = safe_text.match(/(\d+)\/(\d+)/);
+                if (match && bar) {
+                    const pct = (parseInt(match[1], 10) / parseInt(match[2], 10)) * 100;
+                    bar.style.width = pct + "%";
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                if (left === 0) {
+                    Module.setStatus("");
+                }
+            }
+        };
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

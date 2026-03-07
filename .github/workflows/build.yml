@@ -102,4 +102,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ashlands-web
-          path: web/
+          path: build/web

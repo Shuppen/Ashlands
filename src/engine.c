@@ -12,6 +12,10 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef PLATFORM_WEB
+#include <emscripten/emscripten.h>
+#endif
+
 /* Forward declaration for ASCII renderer helpers */
 SDL_Renderer *render_ascii_get_sdl_renderer(void);
 TTF_Font     *render_ascii_get_font(void);
@@ -20,6 +24,10 @@ TTF_Font     *render_ascii_get_font(void);
  * UI log callback wired from Lua
  * ========================================================= */
 static UIState *g_ui_ptr = NULL;
+
+#ifdef PLATFORM_WEB
+static EngineState *g_web_engine = NULL;
+#endif
 
 static void engine_ui_log_cb(const char *text, uint32_t color) {
     if (g_ui_ptr) ui_log(g_ui_ptr, text, color);
@@ -121,6 +129,10 @@ static void init_world(EngineState *eng) {
  * Engine lifecycle
  * ========================================================= */
 EngineState *engine_create(const EngineConfig *cfg) {
+#ifdef PLATFORM_WEB
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "[engine] SDL_Init: %s\n", SDL_GetError());
         return NULL;
@@ -274,40 +286,71 @@ static void engine_render(EngineState *eng) {
     r->end_frame();
 }
 
+static void engine_handle_events(EngineState *eng) {
+    input_begin_frame(&eng->input);
+
+    SDL_Event ev;
+    while (SDL_PollEvent(&ev)) {
+        input_handle_event(&eng->input, &ev);
+    }
+}
+
+static void engine_update_fps(EngineState *eng) {
+    eng->frame_count++;
+
+    uint32_t now = SDL_GetTicks();
+    if (now - eng->last_tick >= 1000) {
+        eng->fps = eng->frame_count;
+        eng->frame_count = 0;
+        eng->last_tick = now;
+    }
+}
+
+static void engine_run_frame(EngineState *eng, int frame_ms, bool cap_fps) {
+    uint32_t frame_start = SDL_GetTicks();
+
+    engine_handle_events(eng);
+    engine_update(eng);
+
+    if (!eng->running) {
+#ifdef PLATFORM_WEB
+        emscripten_cancel_main_loop();
+        g_web_engine = NULL;
+        engine_destroy(eng);
+#endif
+        return;
+    }
+
+    engine_render(eng);
+
+    if (cap_fps) {
+        uint32_t elapsed = SDL_GetTicks() - frame_start;
+        if (frame_ms > 0 && (int)elapsed < frame_ms)
+            SDL_Delay(frame_ms - (int)elapsed);
+    }
+
+    engine_update_fps(eng);
+}
+
+#ifdef PLATFORM_WEB
+static void engine_web_frame(void) {
+    if (!g_web_engine) return;
+    engine_run_frame(g_web_engine, 0, false);
+}
+#endif
+
 /* =========================================================
  * Main loop
  * ========================================================= */
 void engine_run(EngineState *eng) {
-    const int FRAME_MS = 1000 / eng->cfg.target_fps;
+    const int frame_ms = eng->cfg.target_fps > 0 ? 1000 / eng->cfg.target_fps : 0;
 
+#ifdef PLATFORM_WEB
+    g_web_engine = eng;
+    emscripten_set_main_loop(engine_web_frame, 0, 1);
+#else
     while (eng->running) {
-        uint32_t frame_start = SDL_GetTicks();
-
-        /* --- Input --- */
-        input_begin_frame(&eng->input);
-        SDL_Event ev;
-        while (SDL_PollEvent(&ev)) {
-            input_handle_event(&eng->input, &ev);
-        }
-
-        /* --- Update --- */
-        engine_update(eng);
-
-        /* --- Render --- */
-        engine_render(eng);
-
-        /* --- FPS cap --- */
-        uint32_t elapsed = SDL_GetTicks() - frame_start;
-        if ((int)elapsed < FRAME_MS)
-            SDL_Delay(FRAME_MS - (int)elapsed);
-
-        /* --- FPS counter (update once per second) --- */
-        eng->frame_count++;
-        uint32_t now = SDL_GetTicks();
-        if (now - eng->last_tick >= 1000) {
-            eng->fps        = eng->frame_count;
-            eng->frame_count = 0;
-            eng->last_tick  = now;
-        }
+        engine_run_frame(eng, frame_ms, true);
     }
+#endif
 }

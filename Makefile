@@ -2,6 +2,7 @@
 # Targets: ashlands (native), web (WASM via Emscripten), clean
 
 CC      := gcc
+EMCC    ?= emcc
 CFLAGS  := -Wall -Wextra -std=c11 -O2 \
            -Iinclude \
            $(shell sdl2-config --cflags 2>/dev/null || echo "-I/usr/include/SDL2") \
@@ -26,6 +27,10 @@ SRC_C := src/main.c \
          src/procgen/dungeon.c
 
 OBJ := $(SRC_C:.c=.o)
+WEB_DIR := build/web
+WEB_SHELL := web/shell/index.html
+WEB_FONT := assets/fonts/DejaVuSansMono.ttf
+SYSTEM_FONT := /usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf
 
 # ---- Default target ------------------------------------------------
 .PHONY: all clean web run
@@ -45,25 +50,38 @@ run: ashlands
 
 # ---- Web build (Emscripten) ----------------------------------------
 web:
-	@mkdir -p web
-	emcc $(SRC_C) -o web/index.html \
+	@mkdir -p $(WEB_DIR) assets/fonts assets/tilesets assets/sounds mods/core
+	@if [ ! -f "$(WEB_FONT)" ] && [ -f "$(SYSTEM_FONT)" ]; then \
+		cp "$(SYSTEM_FONT)" "$(WEB_FONT)"; \
+	fi
+	@if [ ! -f "$(WEB_FONT)" ]; then \
+		echo "[web] warning: $(WEB_FONT) is missing; ASCII text may not render in browser" >&2; \
+	fi
+	@touch assets/.keep mods/.keep
+	$(EMCC) $(SRC_C) -o $(WEB_DIR)/index.html \
 		-Iinclude \
 		-s USE_SDL=2 \
 		-s USE_SDL_TTF=2 \
 		-s USE_SDL_IMAGE=2 \
+		-s SDL2_IMAGE_FORMATS='["png"]' \
 		-s USE_SDL_MIXER=2 \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s MAX_WEBGL_VERSION=2 \
+		-s MIN_WEBGL_VERSION=1 \
 		-s FULL_ES2=1 \
+		-s ASYNCIFY \
+		-s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
 		--preload-file assets/ \
 		--preload-file mods/ \
+		--shell-file $(WEB_SHELL) \
+		-DPLATFORM_WEB \
 		-O2
-	@echo "Web build OK: web/index.html"
+	@echo "Web build OK: $(WEB_DIR)/index.html"
 
 # ---- Clean ---------------------------------------------------------
 clean:
 	rm -f $(OBJ) ashlands
-	rm -rf web/
+	rm -rf $(WEB_DIR)
 
 # ---- Dependency hints (optional) -----------------------------------
 # Ubuntu/Debian: sudo apt install libsdl2-dev libsdl2-ttf-dev

@@ -41,6 +41,15 @@ make
 ./ashlands
 ```
 
+### Веб-билд и локальный предпросмотр
+```bash
+make web
+cd build/web
+python3 -m http.server 8080
+```
+
+`main`-push также запускает `.github/workflows/build-and-deploy.yml` и выкладывает веб-версию на GitHub Pages для Telegram Mini App.
+
 ### Параметры запуска
 ```
 ./ashlands --help
