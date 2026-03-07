@@ -702,11 +702,38 @@ ashlands/
 
 > Обновляй эту секцию каждую сессию!
 
-**Дата:** ___
-**Фаза:** 0 (подготовка)
-**Готовые файлы:** пока нет
-**Текущая задача:** ___
-**Проблемы:** ___
+**Дата:** 2026-03-07
+**Фаза:** 1 (Скелет — в работе)
+**Готовые файлы:**
+- `include/ashlands.h` — глобальные типы, константы, компоненты ECS
+- `src/ecs.h / ecs.c` — Entity-Component-System (создание, удаление, теги, запросы)
+- `src/world.h / world.c` — карта, FOV (shadowcast), время суток
+- `src/input.h / input.c` — клавиатура, привязки WASD/стрелки/numpad
+- `src/ui.h / ui.c` — лог событий, FPS, подсказки
+- `src/render/render.h` — абстрактный интерфейс рендерера
+- `src/render/camera.h / camera.c` — камера (tile↔screen)
+- `src/render/render_ascii.c` — ASCII-рендер (SDL2_ttf), все 4 режима-заглушки
+- `src/procgen/procgen.h` — интерфейс процедурной генерации
+- `src/procgen/dungeon.c` — BSP-данжен + LCG RNG + overworld-заглушка
+- `src/lua_api.h / lua_api.c` — LuaJIT биндинги (entity, map, world, ui API)
+- `src/engine.h / engine.c` — инициализация, игровой цикл, FPS-каппинг
+- `src/main.c` — точка входа, парсинг аргументов
+- `Makefile` — сборка native + web (Emscripten)
+- `CMakeLists.txt` — CMake для CI
+- `.github/workflows/build.yml` — CI/CD (Linux, macOS, Windows, Web)
+- `mods/core/init.lua` — загрузчик базового контента
+- `mods/core/textures/textures.lua` — 4 процедурные текстуры
+- `mods/core/creatures/rat.lua` — пепельная крыса (Lua AI)
+- `mods/core/creatures/ash_wolf.lua` — пепельный волк (Lua AI, стайный)
+- `mods/core/items/items.lua` — базовые предметы (еда, оружие, расходники)
+- `mods/core/biomes/biomes.lua` — 4 биома (пустоши, мёртвый лес, руины, данжен)
+- `templates/` — шаблоны для вайб-кодеров + README
+
+**Текущая задача:** Компиляция и тест MVP (ASCII рендер + данжен + движение)
+**Следующий шаг:** Установить зависимости (`make`), запустить `./ashlands`
+**Проблемы:** render_tiles.c, render_iso.c, render_3d.c — заглушки (Phase 2/3)
+             texgen/noise.c — процедурные текстуры не генерируются в runtime (Phase 2)
+             Lua dir-scan (`lua_ctx_load_dir`) — пустышка (Phase 2)
 
 ---
 
