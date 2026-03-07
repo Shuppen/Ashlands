@@ -52,7 +52,7 @@ typedef struct {
 /* =========================================================
  * WorldState
  * ========================================================= */
-typedef struct {
+typedef struct WorldState {
     World      *ecs;
     GameMap     map;
     WorldTime   time;
