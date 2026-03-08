@@ -5,7 +5,9 @@
 #include "ui.h"
 
 #include <SDL2/SDL.h>
+#ifndef PLATFORM_ANDROID
 #include <SDL2/SDL_ttf.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 
@@ -26,8 +28,9 @@ void ui_log(UIState *ui, const char *text, uint32_t color) {
 /* =========================================================
  * Helper: render one line of text
  * ========================================================= */
+#ifndef PLATFORM_ANDROID
 static void render_text(SDL_Renderer *ren, TTF_Font *font,
-                         const char *text, int x, int y, uint32_t color)
+                          const char *text, int x, int y, uint32_t color)
 {
     if (!font || !text || !text[0]) return;
     SDL_Color c = {
@@ -88,3 +91,14 @@ void ui_render(const UIState *ui, void *sdl_renderer, void *ttf_font,
 
     dialog_ui_draw(ui, ren, font, screen_w, screen_h);
 }
+#else
+void ui_render(const UIState *ui, void *sdl_renderer, void *ttf_font,
+               int screen_w, int screen_h)
+{
+    (void)ui;
+    (void)sdl_renderer;
+    (void)ttf_font;
+    (void)screen_w;
+    (void)screen_h;
+}
+#endif

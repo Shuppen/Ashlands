@@ -74,11 +74,10 @@ web:
 	@touch assets/.keep mods/.keep
 	$(EMCC) $(SRC_C) -o $(WEB_DIR)/index.html \
 		-Iinclude \
-		-s USE_SDL=2 \
-		-s USE_SDL_TTF=2 \
-		-s USE_SDL_IMAGE=2 \
-		-s SDL2_IMAGE_FORMATS='["png"]' \
-		-s USE_SDL_MIXER=2 \
+		--use-port=sdl2 \
+		--use-port=sdl2_ttf \
+		--use-port=sdl2_image:formats=png \
+		--use-port=sdl2_mixer \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s MAX_WEBGL_VERSION=2 \
 		-s MIN_WEBGL_VERSION=1 \

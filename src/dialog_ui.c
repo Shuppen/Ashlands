@@ -1,11 +1,24 @@
 #include "npc.h"
 #include "ui.h"
 
+#ifndef PLATFORM_ANDROID
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#endif
 
 #include <stdio.h>
 
+void dialog_ui_render(UIState *ui, int player_id) {
+    const DialogNode *node = dialog_get_current(player_id);
+
+    if (!ui) {
+        return;
+    }
+
+    ui->dialog_open = node != NULL;
+}
+
+#ifndef PLATFORM_ANDROID
 static void dialog_render_text(SDL_Renderer *ren, TTF_Font *font,
                                const char *text, int x, int y, uint32_t color) {
     SDL_Color c = { RGBA_R(color), RGBA_G(color), RGBA_B(color), RGBA_A(color) };
@@ -35,16 +48,6 @@ static void dialog_render_text(SDL_Renderer *ren, TTF_Font *font,
     SDL_FreeSurface(surf);
     SDL_RenderCopy(ren, tex, NULL, &dst);
     SDL_DestroyTexture(tex);
-}
-
-void dialog_ui_render(UIState *ui, int player_id) {
-    const DialogNode *node = dialog_get_current(player_id);
-
-    if (!ui) {
-        return;
-    }
-
-    ui->dialog_open = node != NULL;
 }
 
 void dialog_ui_draw(const UIState *ui, void *sdl_renderer, void *ttf_font,
@@ -92,3 +95,13 @@ void dialog_ui_draw(const UIState *ui, void *sdl_renderer, void *ttf_font,
     }
     SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_NONE);
 }
+#else
+void dialog_ui_draw(const UIState *ui, void *sdl_renderer, void *ttf_font,
+                    int screen_w, int screen_h) {
+    (void)ui;
+    (void)sdl_renderer;
+    (void)ttf_font;
+    (void)screen_w;
+    (void)screen_h;
+}
+#endif

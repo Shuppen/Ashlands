@@ -42,37 +42,45 @@ jobs:
   # Windows (cross-compile via MinGW)
   # ----------------------------------------------------------------
   windows:
-    runs-on: ubuntu-22.04
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MinGW
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y \
-            gcc-mingw-w64-x86-64 cmake
+      - name: Setup MSYS2 toolchain
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-SDL2
+            mingw-w64-ucrt-x86_64-SDL2_ttf
+            mingw-w64-ucrt-x86_64-SDL2_image
+            mingw-w64-ucrt-x86_64-SDL2_mixer
+            mingw-w64-ucrt-x86_64-luajit
 
-      - name: Check toolchain availability
-        run: |
-          test -f cmake/mingw-toolchain.cmake || {
-            echo "Missing cmake/mingw-toolchain.cmake" >&2
-            exit 1
-          }
+      - name: Configure (CMake)
+        shell: msys2 {0}
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-      - name: Configure (CMake cross)
-        run: |
-          cmake -B build-win \
-            -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release
+      - name: Build (CMake)
+        shell: msys2 {0}
+        run: cmake --build build --parallel
 
-      - name: Build (CMake cross)
-        run: cmake --build build-win --parallel
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashlands-windows
+          path: build/ashlands.exe
 
   # ----------------------------------------------------------------
   # macOS
   # ----------------------------------------------------------------
   macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -148,6 +156,9 @@ jobs:
           mkdir -p android/app/src/main/assets
           ln -sf $(pwd)/src android/app/src/main/jni/src
           ln -sf $(pwd)/include android/app/src/main/jni/include
+          mkdir -p android/app/src/main/java/org/libsdl
+          rm -rf android/app/src/main/java/org/libsdl/app
+          ln -sf $(pwd)/SDL2-2.30.10/android-project/app/src/main/java/org/libsdl/app android/app/src/main/java/org/libsdl/app
           rm -rf android/app/src/main/assets/assets android/app/src/main/assets/mods
           cp -r assets android/app/src/main/assets/
           cp -r mods android/app/src/main/assets/

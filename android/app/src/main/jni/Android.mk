@@ -1,8 +1,9 @@
 LOCAL_PATH := $(call my-dir)
+SDL_PATH := $(LOCAL_PATH)/SDL2
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := main
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/SDL2/include $(LOCAL_PATH)/src $(LOCAL_PATH)/include
+LOCAL_C_INCLUDES := $(SDL_PATH)/include $(LOCAL_PATH)/src $(LOCAL_PATH)/include
 LOCAL_SRC_FILES := \
     src/main.c \
     src/engine.c \
@@ -28,7 +29,9 @@ LOCAL_SRC_FILES := \
     src/render/render_ascii.c \
     src/render/render_3d.c \
     src/procgen/dungeon.c
-LOCAL_SHARED_LIBRARIES := SDL2 SDL2_image SDL2_ttf SDL2_mixer
+LOCAL_SHARED_LIBRARIES := SDL2
 LOCAL_LDLIBS := -lGLESv2 -llog -landroid -lm
 LOCAL_CFLAGS := -DPLATFORM_ANDROID -DGL_GLEXT_PROTOTYPES
 include $(BUILD_SHARED_LIBRARY)
+
+include $(SDL_PATH)/Android.mk

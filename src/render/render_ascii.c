@@ -11,11 +11,14 @@
 #include "../ui.h"
 
 #include <SDL2/SDL.h>
+#ifndef PLATFORM_ANDROID
 #include <SDL2/SDL_ttf.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+#ifndef PLATFORM_ANDROID
 /* =========================================================
  * ASCII backend state
  * ========================================================= */
@@ -223,6 +226,71 @@ static void ascii_on_resize(int width, int height) {
     s_ascii.screen_w = width;
     s_ascii.screen_h = height;
 }
+
+#else
+
+typedef struct {
+    SDL_Window   *window;
+    SDL_Renderer *ren;
+    int           screen_w;
+    int           screen_h;
+} AsciiState;
+
+static AsciiState s_ascii;
+
+static void ascii_init(SDL_Window *win, int width, int height) {
+    s_ascii.window = win;
+    s_ascii.screen_w = width;
+    s_ascii.screen_h = height;
+    s_ascii.ren = SDL_CreateRenderer(win, -1,
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!s_ascii.ren) {
+        s_ascii.ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
+    }
+}
+
+static void ascii_shutdown(void) {
+    if (s_ascii.ren) {
+        SDL_DestroyRenderer(s_ascii.ren);
+        s_ascii.ren = NULL;
+    }
+}
+
+static void ascii_begin_frame(void) {
+    if (!s_ascii.ren) {
+        return;
+    }
+    SDL_SetRenderDrawColor(s_ascii.ren, 0, 0, 0, 255);
+    SDL_RenderClear(s_ascii.ren);
+}
+
+static void ascii_end_frame(void) {
+    if (!s_ascii.ren) {
+        return;
+    }
+    SDL_RenderPresent(s_ascii.ren);
+}
+
+static void ascii_render_map(const WorldState *ws, const Camera *cam) {
+    (void)ws;
+    (void)cam;
+}
+
+static void ascii_render_entities(const WorldState *ws, const Camera *cam) {
+    (void)ws;
+    (void)cam;
+}
+
+static void ascii_render_ui(const UIState *ui) {
+    (void)ui;
+}
+
+static void ascii_on_resize(int width, int height) {
+    s_ascii.screen_w = width;
+    s_ascii.screen_h = height;
+}
+
+#endif
 
 /* =========================================================
  * Factory

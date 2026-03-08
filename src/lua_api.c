@@ -8,7 +8,7 @@
  */
 #include "lua_api.h"
 
-#ifdef PLATFORM_WEB
+#if defined(PLATFORM_WEB) || defined(PLATFORM_ANDROID)
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -8,20 +8,65 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 option(ASHLANDS_ENABLE_LTO "Enable link-time optimisation" OFF)
 
 # --- Find dependencies ----------------------------------------------
-find_package(SDL2   REQUIRED)
+find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # SDL2 extension libs (not always in CMake modules)
-find_library(SDL2_TTF_LIB   SDL2_ttf)
-find_library(SDL2_IMAGE_LIB SDL2_image)
-find_library(SDL2_MIXER_LIB SDL2_mixer)
+find_library(SDL2_TTF_LIB NAMES SDL2_ttf)
+find_library(SDL2_IMAGE_LIB NAMES SDL2_image)
+find_library(SDL2_MIXER_LIB NAMES SDL2_mixer)
 
 # LuaJIT
-find_library(LUAJIT_LIB luajit-5.1 NAMES luajit)
+find_library(LUAJIT_LIB NAMES luajit-5.1 luajit)
 find_path(LUAJIT_INCLUDE_DIR lua.h
     PATHS /usr/include/luajit-2.1
-          /usr/local/include/luajit-2.1
-          /usr/include/lua5.1)
+           /usr/local/include/luajit-2.1
+          /opt/homebrew/include/luajit-2.1
+           /usr/include/lua5.1
+          /ucrt64/include/luajit-2.1
+          /mingw64/include/luajit-2.1
+    PATH_SUFFIXES luajit-2.1 lua5.1)
+
+set(ASHLANDS_PLATFORM_LIBS)
+if(UNIX AND NOT APPLE)
+    list(APPEND ASHLANDS_PLATFORM_LIBS m dl)
+elseif(APPLE)
+    list(APPEND ASHLANDS_PLATFORM_LIBS m)
+endif()
+
+set(ASHLANDS_SDL2_LINK_LIBS)
+if(TARGET SDL2::SDL2main AND WIN32)
+    list(APPEND ASHLANDS_SDL2_LINK_LIBS SDL2::SDL2main)
+endif()
+
+if(TARGET SDL2::SDL2)
+    list(APPEND ASHLANDS_SDL2_LINK_LIBS SDL2::SDL2)
+elseif(TARGET SDL2::SDL2-static)
+    list(APPEND ASHLANDS_SDL2_LINK_LIBS SDL2::SDL2-static)
+elseif(SDL2_LIBRARIES)
+    list(APPEND ASHLANDS_SDL2_LINK_LIBS ${SDL2_LIBRARIES})
+else()
+    message(FATAL_ERROR "SDL2 library target was not found")
+endif()
+
+set(ASHLANDS_OPENGL_LIBS)
+if(TARGET OpenGL::GL)
+    list(APPEND ASHLANDS_OPENGL_LIBS OpenGL::GL)
+elseif(OPENGL_LIBRARIES)
+    list(APPEND ASHLANDS_OPENGL_LIBS ${OPENGL_LIBRARIES})
+else()
+    message(FATAL_ERROR "OpenGL library target was not found")
+endif()
+
+foreach(required_lib IN ITEMS SDL2_TTF_LIB SDL2_IMAGE_LIB SDL2_MIXER_LIB LUAJIT_LIB)
+    if(NOT ${required_lib})
+        message(FATAL_ERROR "Missing required dependency: ${required_lib}")
+    endif()
+endforeach()
+
+if(NOT LUAJIT_INCLUDE_DIR)
+    message(FATAL_ERROR "Missing required dependency: LUAJIT_INCLUDE_DIR")
+endif()
 
 # --- Source files ---------------------------------------------------
 set(ASHLANDS_SOURCES
@@ -56,19 +101,17 @@ add_executable(ashlands ${ASHLANDS_SOURCES})
 
 target_include_directories(ashlands PRIVATE
     ${CMAKE_SOURCE_DIR}/include
-    ${SDL2_INCLUDE_DIRS}
     ${LUAJIT_INCLUDE_DIR}
 )
 
-target_link_libraries(ashlands
-    ${SDL2_LIBRARIES}
+target_link_libraries(ashlands PRIVATE
+    ${ASHLANDS_SDL2_LINK_LIBS}
     ${SDL2_TTF_LIB}
     ${SDL2_IMAGE_LIB}
     ${SDL2_MIXER_LIB}
     ${LUAJIT_LIB}
-    ${OPENGL_LIBRARIES}
-    m
-    dl
+    ${ASHLANDS_OPENGL_LIBS}
+    ${ASHLANDS_PLATFORM_LIBS}
 )
 
 if(ASHLANDS_ENABLE_LTO)

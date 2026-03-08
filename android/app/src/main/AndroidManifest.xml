@@ -6,7 +6,7 @@
         android:label="Ashlands"
         android:supportsRtl="true">
         <activity
-            android:name="org.libsdl.app.SDLActivity"
+            android:name="org.ashlands.game.AshlandsActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true"
             android:launchMode="singleTask">
