@@ -79,6 +79,23 @@ ui_log(text, color)                 -- сообщение в лог
 ui_show_message(text)               -- уведомление
 ```
 
+### Квесты, NPC и фракции
+```lua
+quest_start(quest_id)               -- запустить квест
+quest_active(quest_id)              -- → bool
+quest_available(quest_id)           -- → bool
+quest_advance(quest_id)             -- перейти к следующему этапу
+quest_fail(quest_id)                -- провалить квест
+
+npc_start_dialog(npc_id)            -- открыть диалог
+npc_dialog_open()                   -- → bool
+
+faction_get_rep(faction_id)         -- → репутация игрока
+faction_change_rep(faction_id, d)   -- изменить репутацию
+
+player_level()                      -- → уровень игрока
+```
+
 ### Константы тайлов
 ```lua
 TILE_FLOOR, TILE_WALL, TILE_WATER, TILE_ASH,
@@ -100,6 +117,13 @@ COL_YELLOW, COL_GRAY, COL_BROWN
 - Используй уникальные `id` (добавь префикс: `mymod_rat`)
 - Тестируй в ASCII-режиме (быстрее всего)
 - Если что-то сломалось — смотри консоль, там будет ошибка Lua
+
+## Как просить AI точнее
+
+- `Сделай из шаблона предмет для ранней игры, без новых API`
+- `Сделай из шаблона квест в 2 этапа с talk_to и collect`
+- `Сделай процедурную текстуру пепельного камня, тайлимую, 32x32`
+- `Сделай NPC с 3 вариантами реплик и условием quest_active`
 
 ---
 

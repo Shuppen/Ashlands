@@ -12,6 +12,14 @@ register_quest({
     description = "Описание задачи.",
     giver = "npc_elder",       -- NPC, выдающий квест (опционально)
 
+    available_when = function()
+        return player_level() >= 1
+    end,
+
+    fail_conditions = {
+        -- { type = "kill_npc", npc = "npc_elder" },
+    },
+
     -- Условия запуска
     trigger = {
         type = "talk",         -- "talk" | "enter_biome" | "kill" | "find"
@@ -62,3 +70,6 @@ register_quest({
         ui_log("Квест провален.", COL_RED)
     end,
 })
+
+-- Скажи AI: «Сделай из этого шаблона квест для охотника, 2 этапа,
+-- collect + talk_to, награда xp + reputation + item»

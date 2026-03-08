@@ -23,6 +23,10 @@ static void parse_args(int argc, char **argv, EngineConfig *cfg) {
             cfg->render_mode = RENDER_ASCII;
         } else if (strcmp(argv[i], "--tiles") == 0) {
             cfg->render_mode = RENDER_TILES_2D;
+        } else if (strcmp(argv[i], "--iso") == 0) {
+            cfg->render_mode = RENDER_ISO_25D;
+        } else if (strcmp(argv[i], "--3d") == 0) {
+            cfg->render_mode = RENDER_LOWPOLY_3D;
         } else if (strcmp(argv[i], "--seed") == 0 && i + 1 < argc) {
             cfg->world_seed = (uint32_t)strtoul(argv[++i], NULL, 0);
         } else if (strcmp(argv[i], "--width") == 0 && i + 1 < argc) {
@@ -39,6 +43,8 @@ static void parse_args(int argc, char **argv, EngineConfig *cfg) {
                    "  --fullscreen, -f   Start in fullscreen\n"
                    "  --ascii            Use ASCII renderer (default)\n"
                    "  --tiles            Use 2D tile renderer\n"
+                   "  --iso              Use 2.5D isometric renderer\n"
+                   "  --3d               Use low-poly 3D renderer\n"
                    "  --seed N           Set world seed\n"
                    "  --width W          Screen width  (default 1024)\n"
                    "  --height H         Screen height (default 768)\n"

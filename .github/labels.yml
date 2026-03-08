@@ -1,0 +1,21 @@
+- name: good-first-mod
+  color: 2da44e
+  description: Good first Lua/content contribution.
+- name: needs-creature
+  color: b60205
+  description: Creature content wanted.
+- name: needs-biome
+  color: 1d76db
+  description: Biome content wanted.
+- name: needs-item
+  color: d4a72c
+  description: Item content wanted.
+- name: needs-quest
+  color: 8250df
+  description: Quest and dialog content wanted.
+- name: engine
+  color: 6e7781
+  description: Engine-level code and tooling work.
+- name: community-pick
+  color: e3b341
+  description: Highlighted idea chosen by the community.

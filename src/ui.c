@@ -83,6 +83,8 @@ void ui_render(const UIState *ui, void *sdl_renderer, void *ttf_font,
                 screen_w - 80, pad, COL_GRAY);
 
     /* --- Help hint (top-left) --- */
-    render_text(ren, font, "Arrows/WASD=move  Q=quit  ?=help",
+    render_text(ren, font, "Arrows/WASD=move  E=talk  1-8=choice  Esc=close  Q=quit",
                 pad, pad, COL_DARKGRAY);
+
+    dialog_ui_draw(ui, ren, font, screen_w, screen_h);
 }

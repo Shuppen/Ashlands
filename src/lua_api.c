@@ -46,6 +46,32 @@ void lua_api_set_ui_log(void (*fn)(const char *, uint32_t)) {
     (void)fn;
 }
 
+int lua_api_ref_function(struct lua_State *L, int index) {
+    (void)L;
+    (void)index;
+    return -2;
+}
+
+void lua_api_unref_function(int ref) {
+    (void)ref;
+}
+
+bool lua_api_call_ref_bool(int ref) {
+    (void)ref;
+    return true;
+}
+
+bool lua_api_call_ref_void(int ref) {
+    (void)ref;
+    return true;
+}
+
+bool lua_api_call_ref_int(int ref, int value) {
+    (void)ref;
+    (void)value;
+    return true;
+}
+
 bool lua_call_on_turn(LuaContext *ctx, int entity_id) {
     (void)ctx;
     (void)entity_id;
@@ -76,10 +102,13 @@ bool lua_call_on_interact(LuaContext *ctx, int entity_id, int other_id) {
 
 #include "world.h"
 #include "ecs.h"
+#include "faction.h"
+#include "item.h"
+#include "npc.h"
+#include "quest.h"
+#include "texgen/texgen.h"
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#include "lua_compat.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -89,10 +118,73 @@ bool lua_call_on_interact(LuaContext *ctx, int entity_id, int other_id) {
  * Global WorldState pointer (set by lua_ctx_set_world)
  * ========================================================= */
 static WorldState *g_world = NULL;
+static lua_State *g_api_lua = NULL;
 
 void lua_ctx_set_world(LuaContext *ctx, void *ws) {
     (void)ctx;
     g_world = (WorldState *)ws;
+}
+
+int lua_api_ref_function(struct lua_State *L, int index) {
+    if (!L || !lua_isfunction(L, index)) {
+        return LUA_NOREF;
+    }
+    lua_pushvalue(L, index);
+    return luaL_ref(L, LUA_REGISTRYINDEX);
+}
+
+void lua_api_unref_function(int ref) {
+    if (!g_api_lua || ref == LUA_NOREF || ref == LUA_REFNIL) {
+        return;
+    }
+    luaL_unref(g_api_lua, LUA_REGISTRYINDEX, ref);
+}
+
+bool lua_api_call_ref_bool(int ref) {
+    bool result = false;
+
+    if (!g_api_lua || ref == LUA_NOREF || ref == LUA_REFNIL) {
+        return true;
+    }
+
+    lua_rawgeti(g_api_lua, LUA_REGISTRYINDEX, ref);
+    if (lua_pcall(g_api_lua, 0, 1, 0) != 0) {
+        fprintf(stderr, "[Lua] callback: %s\n", lua_tostring(g_api_lua, -1));
+        lua_pop(g_api_lua, 1);
+        return false;
+    }
+    result = lua_toboolean(g_api_lua, -1) != 0;
+    lua_pop(g_api_lua, 1);
+    return result;
+}
+
+bool lua_api_call_ref_void(int ref) {
+    if (!g_api_lua || ref == LUA_NOREF || ref == LUA_REFNIL) {
+        return true;
+    }
+
+    lua_rawgeti(g_api_lua, LUA_REGISTRYINDEX, ref);
+    if (lua_pcall(g_api_lua, 0, 0, 0) != 0) {
+        fprintf(stderr, "[Lua] callback: %s\n", lua_tostring(g_api_lua, -1));
+        lua_pop(g_api_lua, 1);
+        return false;
+    }
+    return true;
+}
+
+bool lua_api_call_ref_int(int ref, int value) {
+    if (!g_api_lua || ref == LUA_NOREF || ref == LUA_REFNIL) {
+        return true;
+    }
+
+    lua_rawgeti(g_api_lua, LUA_REGISTRYINDEX, ref);
+    lua_pushinteger(g_api_lua, value);
+    if (lua_pcall(g_api_lua, 1, 0, 0) != 0) {
+        fprintf(stderr, "[Lua] callback: %s\n", lua_tostring(g_api_lua, -1));
+        lua_pop(g_api_lua, 1);
+        return false;
+    }
+    return true;
 }
 
 /* =========================================================
@@ -326,6 +418,84 @@ static int l_ui_show_message(lua_State *L) {
     return 0;
 }
 
+static int l_quest_start(lua_State *L) {
+    const char *quest_id = luaL_checkstring(L, 1);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    lua_pushboolean(L, quest_start(player_id, quest_id));
+    return 1;
+}
+
+static int l_quest_active(lua_State *L) {
+    const char *quest_id = luaL_checkstring(L, 1);
+
+    lua_pushboolean(L, quest_active(quest_id));
+    return 1;
+}
+
+static int l_player_level(lua_State *L) {
+    CHECK_WORLD(L);
+    if (g_world->ecs->player_id < 0) {
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+    lua_pushinteger(L, g_world->ecs->stats[g_world->ecs->player_id].level);
+    return 1;
+}
+
+static int l_faction_get_rep(lua_State *L) {
+    const char *faction_id = luaL_checkstring(L, 1);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    lua_pushinteger(L, faction_get_rep(player_id, faction_id));
+    return 1;
+}
+
+static int l_faction_change_rep(lua_State *L) {
+    const char *faction_id = luaL_checkstring(L, 1);
+    int delta = (int)luaL_checkinteger(L, 2);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    faction_change_rep(player_id, faction_id, delta);
+    return 0;
+}
+
+static int l_npc_start_dialog(lua_State *L) {
+    const char *npc_id = luaL_checkstring(L, 1);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    lua_pushboolean(L, npc_start_dialog(player_id, npc_id));
+    return 1;
+}
+
+static int l_quest_available(lua_State *L) {
+    const char *quest_id = luaL_checkstring(L, 1);
+
+    lua_pushboolean(L, quest_available(quest_id));
+    return 1;
+}
+
+static int l_quest_advance(lua_State *L) {
+    const char *quest_id = luaL_checkstring(L, 1);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    lua_pushboolean(L, quest_advance(player_id, quest_id));
+    return 1;
+}
+
+static int l_quest_fail(lua_State *L) {
+    const char *quest_id = luaL_checkstring(L, 1);
+    int player_id = g_world && g_world->ecs ? g_world->ecs->player_id : -1;
+
+    lua_pushboolean(L, quest_fail(player_id, quest_id));
+    return 1;
+}
+
+static int l_npc_dialog_open(lua_State *L) {
+    lua_pushboolean(L, npc_dialog_open());
+    return 1;
+}
+
 /* =========================================================
  * === REGISTRATION TABLE ===
  * ========================================================= */
@@ -352,6 +522,17 @@ static const luaL_Reg ASHLANDS_LIB[] = {
     /* UI */
     { "ui_log",             l_ui_log             },
     { "ui_show_message",    l_ui_show_message    },
+    /* Phase 3 systems */
+    { "quest_start",        l_quest_start        },
+    { "quest_active",       l_quest_active       },
+    { "quest_available",    l_quest_available    },
+    { "quest_advance",      l_quest_advance      },
+    { "quest_fail",         l_quest_fail         },
+    { "player_level",       l_player_level       },
+    { "faction_get_rep",    l_faction_get_rep    },
+    { "faction_change_rep", l_faction_change_rep },
+    { "npc_start_dialog",   l_npc_start_dialog   },
+    { "npc_dialog_open",    l_npc_dialog_open    },
     { NULL,                 NULL                 },
 };
 
@@ -380,12 +561,19 @@ void lua_ctx_destroy(LuaContext *ctx) {
 void lua_api_register(LuaContext *ctx) {
     if (!ctx || !ctx->L) return;
     lua_State *L = ctx->L;
+    g_api_lua = L;
 
     /* Register all functions as globals */
     for (int i = 0; ASHLANDS_LIB[i].name; i++) {
         lua_pushcfunction(L, ASHLANDS_LIB[i].func);
         lua_setglobal(L, ASHLANDS_LIB[i].name);
     }
+
+    texgen_register_lua(L);
+    faction_register_lua(L);
+    item_register_lua(L);
+    npc_register_lua(L);
+    quest_register_lua(L);
 
     /* Expose tile type constants */
     lua_pushinteger(L, TILE_FLOOR);       lua_setglobal(L, "TILE_FLOOR");

@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [ "**" ]
+    tags: [ "v*", "release-*" ]
   pull_request:
     branches: [ main, master ]
 
@@ -45,19 +46,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install MinGW + SDL2
+      - name: Install MinGW
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y \
-            gcc-mingw-w64-x86-64 cmake \
-            libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsdl2-mixer-dev \
-            libluajit-5.1-dev
+            gcc-mingw-w64-x86-64 cmake
 
-      - name: Build (CMake cross)
+      - name: Check toolchain availability
+        run: |
+          test -f cmake/mingw-toolchain.cmake || {
+            echo "Missing cmake/mingw-toolchain.cmake" >&2
+            exit 1
+          }
+
+      - name: Configure (CMake cross)
         run: |
           cmake -B build-win \
             -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-toolchain.cmake \
-            -DCMAKE_BUILD_TYPE=Release || echo "Cross-compile requires toolchain file; skipping."
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (CMake cross)
+        run: cmake --build build-win --parallel
 
   # ----------------------------------------------------------------
   # macOS
@@ -88,12 +97,16 @@ jobs:
   # ----------------------------------------------------------------
   web:
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Emscripten
         uses: mymindstorm/setup-emsdk@v13
+
+      - name: Install native deps for local tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libluajit-5.1-dev
 
       - name: Build WASM
         run: make web
@@ -103,3 +116,56 @@ jobs:
         with:
           name: ashlands-web
           path: build/web
+
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Setup NDK
+        run: sdkmanager "ndk;25.2.9519653"
+
+      - name: Download SDL2 source
+        run: |
+          wget https://github.com/libsdl-org/SDL/releases/download/release-2.30.10/SDL2-2.30.10.tar.gz
+          tar xf SDL2-2.30.10.tar.gz
+          ln -sf $(pwd)/SDL2-2.30.10 android/app/src/main/jni/SDL2
+
+      - name: Link source code and assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          ln -sf $(pwd)/src android/app/src/main/jni/src
+          ln -sf $(pwd)/include android/app/src/main/jni/include
+          rm -rf android/app/src/main/assets/assets android/app/src/main/assets/mods
+          cp -r assets android/app/src/main/assets/
+          cp -r mods android/app/src/main/assets/
+
+      - name: Generate Gradle wrapper
+        working-directory: android
+        run: gradle wrapper --gradle-version 8.4
+
+      - name: Make Gradle wrapper executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      - name: Build APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ashlands-android
+          path: android/app/build/outputs/apk/release/*.apk

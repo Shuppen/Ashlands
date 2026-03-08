@@ -118,15 +118,26 @@ static const KeyBinding KEY_BINDINGS[] = {
     { SDL_SCANCODE_SLASH,  ACTION_OPEN_HELP      },
     { SDL_SCANCODE_ESCAPE, ACTION_CLOSE_MENU     },
     { SDL_SCANCODE_RETURN, ACTION_CONFIRM        },
+    { SDL_SCANCODE_1,      ACTION_DIALOG_OPTION_1 },
+    { SDL_SCANCODE_2,      ACTION_DIALOG_OPTION_2 },
+    { SDL_SCANCODE_3,      ACTION_DIALOG_OPTION_3 },
+    { SDL_SCANCODE_4,      ACTION_DIALOG_OPTION_4 },
+    { SDL_SCANCODE_5,      ACTION_DIALOG_OPTION_5 },
+    { SDL_SCANCODE_6,      ACTION_DIALOG_OPTION_6 },
+    { SDL_SCANCODE_7,      ACTION_DIALOG_OPTION_7 },
+    { SDL_SCANCODE_8,      ACTION_DIALOG_OPTION_8 },
 
     /* Meta */
     { SDL_SCANCODE_Q, ACTION_QUIT             },
     { SDL_SCANCODE_F11, ACTION_TOGGLE_FULLSCREEN },
     { SDL_SCANCODE_F12, ACTION_SCREENSHOT       },
+    { SDL_SCANCODE_F5, ACTION_SAVE_GAME },
+    { SDL_SCANCODE_F9, ACTION_LOAD_GAME },
 };
 
 GameAction input_get_action(const InputState *inp) {
-    for (size_t i = 0; i < sizeof(KEY_BINDINGS)/sizeof(KEY_BINDINGS[0]); i++) {
+    size_t binding_count = sizeof(KEY_BINDINGS) / sizeof(KEY_BINDINGS[0]);
+    for (size_t i = 0; i < binding_count; i++) {
         if (inp->keys_pressed[KEY_BINDINGS[i].key])
             return KEY_BINDINGS[i].action;
     }

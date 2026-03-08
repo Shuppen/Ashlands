@@ -3,10 +3,14 @@
  * C11, MIT License
  */
 #include "engine.h"
+#include "faction.h"
+#include "item.h"
+#include "npc.h"
 #include "procgen/procgen.h"
+#include "quest.h"
+#include "texgen/texgen.h"
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,10 +19,6 @@
 #ifdef PLATFORM_WEB
 #include <emscripten/emscripten.h>
 #endif
-
-/* Forward declaration for ASCII renderer helpers */
-SDL_Renderer *render_ascii_get_sdl_renderer(void);
-TTF_Font     *render_ascii_get_font(void);
 
 /* =========================================================
  * UI log callback wired from Lua
@@ -50,6 +50,138 @@ EngineConfig engine_default_config(void) {
     return cfg;
 }
 
+static void engine_set_default_save_path(EngineState *eng) {
+    snprintf(eng->save_path, sizeof(eng->save_path), "%s/ashlands.save",
+             eng->cfg.data_dir[0] ? eng->cfg.data_dir : ".");
+}
+
+static void engine_sync_world_after_load(EngineState *eng) {
+    PositionComponent *player;
+
+    if (!eng || !eng->world || !eng->world->ecs) {
+        return;
+    }
+
+    player = entity_pos(eng->world->ecs, eng->world->ecs->player_id);
+    if (player) {
+        camera_center_on(&eng->camera, (float)player->x, (float)player->y);
+        map_compute_fov(&eng->world->map, player->x, player->y, 10);
+    }
+
+    eng->ui.player_id = eng->world->ecs->player_id;
+
+    dialog_ui_render(&eng->ui, eng->world->ecs->player_id);
+}
+
+static bool engine_try_pickup(WorldState *ws) {
+    World *w = ws->ecs;
+    PositionComponent *player;
+    InventoryComponent *inv;
+
+    if (!w || w->player_id < 0) {
+        return false;
+    }
+
+    player = entity_pos(w, w->player_id);
+    inv = entity_inventory(w, w->player_id);
+    if (!player || !inv) {
+        return false;
+    }
+
+    for (int id = 0; id < MAX_ENTITIES; id++) {
+        PositionComponent *pos;
+
+        if (!entity_is_alive(w, id) || !entity_has(w, id, COMP_ITEM | COMP_POSITION)) {
+            continue;
+        }
+
+        pos = entity_pos(w, id);
+        if (!pos || pos->x != player->x || pos->y != player->y) {
+            continue;
+        }
+
+        for (int slot = 0; slot < MAX_INVENTORY_SLOTS; slot++) {
+            if (inv->slots[slot] < 0) {
+                inv->slots[slot] = id;
+                inv->count = MIN(inv->count + 1, MAX_INVENTORY_SLOTS);
+                entity_rem_comp(w, id, COMP_POSITION);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    return false;
+}
+
+static const char *engine_nearby_npc(WorldState *ws) {
+    World *w = ws->ecs;
+    PositionComponent *player;
+
+    if (!w || w->player_id < 0) {
+        return NULL;
+    }
+
+    player = entity_pos(w, w->player_id);
+    if (!player) {
+        return NULL;
+    }
+
+    for (int id = 0; id < MAX_ENTITIES; id++) {
+        PositionComponent *pos;
+        int dist;
+
+        if (!entity_is_alive(w, id) || !entity_has_tag(w, id, "npc")) {
+            continue;
+        }
+
+        pos = entity_pos(w, id);
+        if (!pos) {
+            continue;
+        }
+
+        dist = abs(pos->x - player->x) + abs(pos->y - player->y);
+        if (dist <= 1) {
+            return npc_id_for_entity(id);
+        }
+    }
+
+    return NULL;
+}
+
+static bool engine_try_drop(WorldState *ws) {
+    World *w = ws->ecs;
+    PositionComponent *player;
+    InventoryComponent *inv;
+
+    if (!w || w->player_id < 0) {
+        return false;
+    }
+
+    player = entity_pos(w, w->player_id);
+    inv = entity_inventory(w, w->player_id);
+    if (!player || !inv) {
+        return false;
+    }
+
+    for (int slot = inv->count - 1; slot >= 0; slot--) {
+        int item_id = inv->slots[slot];
+        if (item_id < 0 || !entity_is_alive(w, item_id)) {
+            continue;
+        }
+
+        entity_add_comp(w, item_id, COMP_POSITION);
+        w->positions[item_id].x = player->x;
+        w->positions[item_id].y = player->y;
+        w->positions[item_id].z = 0;
+        inv->slots[slot] = -1;
+        inv->count = MAX(inv->count - 1, 0);
+        return true;
+    }
+
+    return false;
+}
+
 /* =========================================================
  * Player spawn
  * ========================================================= */
@@ -73,6 +205,8 @@ static int spawn_player(WorldState *ws, int x, int y) {
     rc->fg_color = COL_WHITE;
     rc->bg_color = COL_BLACK;
     rc->sprite_id = -1;
+    rc->texture_id[0] = '\0';
+    rc->mesh_id[0] = '\0';
 
     StatsComponent *st = entity_stats(w, player);
     st->attack  = 5;
@@ -87,6 +221,28 @@ static int spawn_player(WorldState *ws, int x, int y) {
 
     w->player_id = player;
     return player;
+}
+
+static void seed_player_inventory(WorldState *ws) {
+    World *w = ws->ecs;
+    InventoryComponent *inv = entity_inventory(w, w->player_id);
+
+    if (!inv || inv->count > 0) {
+        return;
+    }
+
+    item_spawn(w, "bandage", 0, 0, true, 0, 1);
+    item_spawn(w, "raw_meat", 0, 0, true, 1, 1);
+    inv->count = 2;
+}
+
+static void seed_world_items(WorldState *ws) {
+    World *w = ws->ecs;
+    int px = ws->map.spawn_x;
+    int py = ws->map.spawn_y;
+
+    item_spawn(w, "wolf_pelt", px + 1, py + 1, false, -1, 1);
+    item_spawn(w, "ash_fang", px + 2, py + 1, false, -1, 1);
 }
 
 /* =========================================================
@@ -120,9 +276,17 @@ static void init_world(EngineState *eng) {
     /* Initial FOV */
     map_compute_fov(&eng->world->map, px, py, 10);
 
+    npc_spawn(eng->world->ecs, "grom_hunter", px + 2, py);
+    seed_player_inventory(eng->world);
+    seed_world_items(eng->world);
+
     ui_log(&eng->ui, "В пепельных пустошах нет героев.", COL_GRAY);
     ui_log(&eng->ui, "Есть только те, кто ещё не сдался.", COL_WHITE);
     ui_log(&eng->ui, "Используй стрелки или WASD для движения.", COL_GRAY);
+}
+
+static bool engine_uses_opengl(RenderMode mode) {
+    return mode == RENDER_LOWPOLY_3D;
 }
 
 /* =========================================================
@@ -142,9 +306,24 @@ EngineState *engine_create(const EngineConfig *cfg) {
     if (!eng) return NULL;
 
     eng->cfg = *cfg;
+    engine_set_default_save_path(eng);
 
     Uint32 win_flags = SDL_WINDOW_RESIZABLE;
     if (cfg->fullscreen) win_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    if (engine_uses_opengl(cfg->render_mode)) {
+        win_flags |= SDL_WINDOW_OPENGL;
+        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+        SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+#ifdef PLATFORM_WEB
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                            SDL_GL_CONTEXT_PROFILE_ES);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#else
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
+    }
 
     eng->window = SDL_CreateWindow(
         "Ashlands " ASHLANDS_VERSION_STR,
@@ -170,16 +349,24 @@ EngineState *engine_create(const EngineConfig *cfg) {
     }
 
     /* Renderer */
-    eng->renderer = render_ascii_create();
+    eng->renderer = renderer_create(cfg->render_mode);
     renderer_set(eng->renderer, eng->window, cfg->screen_w, cfg->screen_h);
+    if (engine_uses_opengl(cfg->render_mode)) {
+        SDL_GL_SetSwapInterval(cfg->vsync ? 1 : 0);
+    }
 
     /* Lua */
     eng->lua = lua_ctx_create();
     if (eng->lua) {
+        faction_init();
+        faction_set_world(eng->world);
+        item_registry_init();
+        npc_init();
+        quest_init();
+        quest_set_world(eng->world);
+        texgen_init();
         lua_api_register(eng->lua);
         lua_ctx_set_world(eng->lua, eng->world);
-        /* Wire UI log callback */
-        extern void lua_api_set_ui_log(void (*fn)(const char*, uint32_t));
         lua_api_set_ui_log(engine_ui_log_cb);
         /* Load core mods */
         lua_ctx_load_file(eng->lua, "mods/core/init.lua");
@@ -188,6 +375,8 @@ EngineState *engine_create(const EngineConfig *cfg) {
     input_init(&eng->input);
 
     init_world(eng);
+    load_game(eng->save_path, eng);
+    engine_sync_world_after_load(eng);
 
     eng->running   = true;
     eng->last_tick = SDL_GetTicks();
@@ -197,6 +386,11 @@ EngineState *engine_create(const EngineConfig *cfg) {
 void engine_destroy(EngineState *eng) {
     if (!eng) return;
     if (eng->renderer && eng->renderer->shutdown) eng->renderer->shutdown();
+    quest_shutdown();
+    npc_shutdown();
+    item_registry_shutdown();
+    faction_shutdown();
+    texgen_shutdown();
     lua_ctx_destroy(eng->lua);
     world_state_destroy(eng->world);
     SDL_DestroyWindow(eng->window);
@@ -234,6 +428,84 @@ static void engine_update(EngineState *eng) {
             SDL_SetWindowFullscreen(eng->window, 0);
         else
             SDL_SetWindowFullscreen(eng->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    }
+
+    if (action == ACTION_SAVE_GAME) {
+        if (save_game(eng->save_path, eng)) {
+            ui_log(&eng->ui, "Игра сохранена.", COL_GREEN);
+        } else {
+            ui_log(&eng->ui, "Не удалось сохранить игру.", COL_RED);
+        }
+    }
+
+    if (action == ACTION_LOAD_GAME) {
+        if (load_game(eng->save_path, eng)) {
+            engine_sync_world_after_load(eng);
+            ui_log(&eng->ui, "Игра загружена.", COL_GREEN);
+        } else {
+            ui_log(&eng->ui, "Не удалось загрузить игру.", COL_RED);
+        }
+    }
+
+    if (action == ACTION_INTERACT) {
+        const char *npc_id = engine_nearby_npc(eng->world);
+
+        if (npc_dialog_open()) {
+            npc_select_option(eng->world->ecs->player_id, 0);
+            dialog_ui_render(&eng->ui, eng->world->ecs->player_id);
+        } else if (npc_id && npc_start_dialog(eng->world->ecs->player_id, npc_id)) {
+            quest_on_talk_to(npc_id);
+            dialog_ui_render(&eng->ui, eng->world->ecs->player_id);
+        } else {
+            ui_log(&eng->ui, "Рядом никого нет.", COL_GRAY);
+        }
+    }
+
+    if (npc_dialog_open() &&
+        action >= ACTION_DIALOG_OPTION_1 &&
+        action <= ACTION_DIALOG_OPTION_8) {
+        int option_index = (int)action - (int)ACTION_DIALOG_OPTION_1;
+        npc_select_option(eng->world->ecs->player_id, option_index);
+        dialog_ui_render(&eng->ui, eng->world->ecs->player_id);
+    }
+
+    if (npc_dialog_open() && action == ACTION_CANCEL) {
+        npc_close_dialog();
+        dialog_ui_render(&eng->ui, eng->world->ecs->player_id);
+    }
+
+    if (action == ACTION_PICKUP) {
+        const char *picked_id = NULL;
+        World *w = eng->world->ecs;
+        InventoryComponent *inv = entity_inventory(w, w->player_id);
+
+        if (engine_try_pickup(eng->world)) {
+            if (inv && inv->count > 0) {
+                picked_id = NULL;
+                for (int slot = 0; slot < MAX_INVENTORY_SLOTS; slot++) {
+                    if (inv->slots[slot] >= 0) {
+                        ItemComponent *item = entity_item(w, inv->slots[slot]);
+                        if (item && item->stack_count > 0) {
+                            picked_id = item->id;
+                        }
+                    }
+                }
+            }
+            ui_log(&eng->ui, "Предмет поднят.", COL_YELLOW);
+            if (picked_id) {
+                quest_on_collect(picked_id, 1);
+            }
+        } else {
+            ui_log(&eng->ui, "Здесь нечего поднимать.", COL_GRAY);
+        }
+    }
+
+    if (action == ACTION_DROP) {
+        if (engine_try_drop(eng->world)) {
+            ui_log(&eng->ui, "Предмет брошен.", COL_YELLOW);
+        } else {
+            ui_log(&eng->ui, "Инвентарь пуст.", COL_GRAY);
+        }
     }
 
     /* Player movement */
@@ -276,12 +548,8 @@ static void engine_render(EngineState *eng) {
     r->render_map(eng->world, &eng->camera);
     r->render_entities(eng->world, &eng->camera);
 
-    /* UI rendered directly via SDL */
-    SDL_Renderer *sdl_ren = render_ascii_get_sdl_renderer();
-    TTF_Font     *font    = render_ascii_get_font();
     eng->ui.fps = eng->fps;
-    ui_render(&eng->ui, sdl_ren, font,
-              eng->cfg.screen_w, eng->cfg.screen_h);
+    r->render_ui(&eng->ui);
 
     r->end_frame();
 }

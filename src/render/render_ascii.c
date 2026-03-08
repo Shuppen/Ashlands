@@ -214,7 +214,9 @@ static void ascii_render_entities(const WorldState *ws, const Camera *cam) {
 }
 
 static void ascii_render_ui(const UIState *ui) {
-    (void)ui; /* UI rendering delegated to ui.c */
+    dialog_ui_render((UIState *)ui, ui->player_id);
+    ui_render(ui, s_ascii.ren, s_ascii.font,
+              s_ascii.screen_w, s_ascii.screen_h);
 }
 
 static void ascii_on_resize(int width, int height) {
@@ -240,33 +242,4 @@ static Renderer s_ascii_renderer = {
 
 Renderer *render_ascii_create(void) {
     return &s_ascii_renderer;
-}
-
-/* =========================================================
- * Global renderer + helper stubs
- * ========================================================= */
-
-Renderer *g_renderer = NULL;
-
-Renderer *render_tiles_create(void)  { return render_ascii_create(); } /* Phase 2 */
-Renderer *render_iso_create(void)    { return render_ascii_create(); } /* Phase 2 */
-Renderer *render_3d_create(void)     { return render_ascii_create(); } /* Phase 3 */
-
-void renderer_destroy(Renderer *r) {
-    (void)r; /* static singletons — nothing to free */
-}
-
-void renderer_set(Renderer *r, SDL_Window *win, int w, int h) {
-    if (g_renderer && g_renderer->shutdown) g_renderer->shutdown();
-    g_renderer = r;
-    if (g_renderer && g_renderer->init) g_renderer->init(win, w, h);
-}
-
-/* Expose SDL renderer for UI module */
-SDL_Renderer *render_ascii_get_sdl_renderer(void) {
-    return s_ascii.ren;
-}
-
-TTF_Font *render_ascii_get_font(void) {
-    return s_ascii.font;
 }

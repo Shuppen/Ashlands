@@ -26,8 +26,21 @@ jobs:
         with:
           version: 3.1.51
 
+      - name: Install native deps for Lua headers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libluajit-5.1-dev
+
       - name: Build WASM bundle
         run: make web
+
+      - name: Smoke check web output
+        run: |
+          test -f build/web/index.html
+          test -f build/web/index.js
+
+      - name: Add SPA fallback
+        run: cp build/web/index.html build/web/404.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -52,6 +65,11 @@ jobs:
 
       - name: Build
         run: make
+
+      - name: Smoke check CLI
+        run: |
+          ./ashlands --help
+          ./ashlands --version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

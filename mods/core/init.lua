@@ -11,6 +11,9 @@ local modules = {
     "mods/core/creatures/ash_wolf.lua",
     "mods/core/items/items.lua",
     "mods/core/biomes/biomes.lua",
+    "mods/core/factions/factions.lua",
+    "mods/core/quests/first_hunt.lua",
+    "mods/core/npcs/grom_hunter.lua",
 }
 
 for _, path in ipairs(modules) do

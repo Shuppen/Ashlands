@@ -15,6 +15,7 @@
 #include "ui.h"
 #include "render/render.h"
 #include "render/camera.h"
+#include "save.h"
 
 /* =========================================================
  * Engine configuration (loaded from config.lua or defaults)
@@ -33,7 +34,7 @@ typedef struct {
 /* =========================================================
  * EngineState — owns all subsystems
  * ========================================================= */
-typedef struct {
+typedef struct AshEngineState {
     SDL_Window   *window;
     bool          running;
 
@@ -49,6 +50,7 @@ typedef struct {
     uint32_t      last_tick;
     int           frame_count;
     int           fps;
+    char          save_path[SAVE_PATH_LEN];
 } EngineState;
 
 /* =========================================================

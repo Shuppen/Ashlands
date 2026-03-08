@@ -24,6 +24,7 @@ typedef struct UIState {
     bool    show_inventory;
     bool    show_stats;
     bool    show_help;
+    bool    dialog_open;
     int     player_id;
     int     fps;
 } UIState;
@@ -32,6 +33,9 @@ void  ui_state_init(UIState *ui, int player_id);
 
 /* Add a message to the event log */
 void  ui_log(UIState *ui, const char *text, uint32_t color);
+void  dialog_ui_render(UIState *ui, int player_id);
+void  dialog_ui_draw(const UIState *ui, void *sdl_renderer, void *ttf_font,
+                     int screen_w, int screen_h);
 
 /* Render the entire UI overlay (log, stats bar, etc.) */
 void  ui_render(const UIState *ui, void *sdl_renderer, void *ttf_font,

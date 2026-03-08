@@ -21,9 +21,23 @@ SRC_C := src/main.c \
          src/world.c \
          src/input.c \
          src/ui.c \
+         src/dialog_ui.c \
+         src/faction.c \
+         src/item.c \
          src/lua_api.c \
+         src/npc.c \
+         src/quest.c \
+         src/save.c \
+         src/texgen/noise.c \
+         src/texgen/texcache.c \
+         src/texgen/texgen.c \
          src/render/camera.c \
+         src/render/mesh.c \
+         src/render/render_3d_scene.c \
+         src/render/shader.c \
          src/render/render_ascii.c \
+         src/render/render.c \
+         src/render/render_3d.c \
          src/procgen/dungeon.c
 
 OBJ := $(SRC_C:.c=.o)

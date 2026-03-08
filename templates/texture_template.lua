@@ -65,3 +65,6 @@ register_texture("my_texture", {
 --     type = "file",
 --     path = "mods/my_mod/hero.png",
 -- })
+
+-- Скажи AI: «Сделай из этого шаблона текстуру ash_stone / dead_grass /
+-- ruin_wall, тайлимую, с perlin и voronoi слоями»

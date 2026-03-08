@@ -9,6 +9,7 @@
 #define ASHLANDS_LUA_API_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /* Forward declaration — avoids including lua headers everywhere */
 struct lua_State;
@@ -38,6 +39,12 @@ void lua_ctx_set_world(LuaContext *ctx, void *world_state);
  * Called once after lua_ctx_create()
  * ========================================================= */
 void lua_api_register(LuaContext *ctx);
+void lua_api_set_ui_log(void (*fn)(const char *text, uint32_t color));
+int  lua_api_ref_function(struct lua_State *L, int index);
+void lua_api_unref_function(int ref);
+bool lua_api_call_ref_bool(int ref);
+bool lua_api_call_ref_void(int ref);
+bool lua_api_call_ref_int(int ref, int value);
 
 /* =========================================================
  * Call Lua hooks on game events

@@ -55,6 +55,7 @@ extern Renderer *g_renderer;
 /* =========================================================
  * Renderer factories (one per backend)
  * ========================================================= */
+Renderer *renderer_create(RenderMode mode);
 Renderer *render_ascii_create(void);
 Renderer *render_tiles_create(void);   /* stub for Phase 2 */
 Renderer *render_iso_create(void);     /* stub for Phase 2 */

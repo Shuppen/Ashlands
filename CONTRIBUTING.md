@@ -12,6 +12,9 @@ whether you're a seasoned C developer or a vibe-coder using AI assistants.
 | New creature | Lua mod | `mods/community/` |
 | New item | Lua mod | `mods/community/` |
 | New biome | Lua mod | `mods/community/` |
+| New quest | Lua mod | `mods/community/` |
+| New NPC dialog | Lua mod | `mods/community/` |
+| New procedural texture | Lua mod | `mods/community/` |
 | Bug fix in engine | C pull request | `src/` |
 | New engine feature | C pull request | `src/` |
 | Tileset / art | PNG assets | `assets/tilesets/` |
@@ -23,6 +26,8 @@ whether you're a seasoned C developer or a vibe-coder using AI assistants.
 
 ## For vibe-coders (Lua content)
 
+Ты не должен уметь программировать, чтобы сделать полезный вклад. Если можешь описать идею словами, AI уже может превратить её в мод на Lua.
+
 1. Read `templates/README.md` — it explains everything
 2. Copy the relevant template from `templates/`
 3. Fill it in (ask your AI assistant if needed)
@@ -31,6 +36,24 @@ whether you're a seasoned C developer or a vibe-coder using AI assistants.
 6. Submit a pull request
 
 **You don't need to understand C to contribute Lua content.**
+
+Для Phase 3 особенно полезны квесты, фракции, NPC-диалоги и процедурные текстуры.
+
+### Уровни сложности
+
+- ⭐ Предмет или простая текстура
+- ⭐⭐ Существо или короткий диалог
+- ⭐⭐⭐ Биом или многошаговый квест
+- ⭐⭐⭐⭐ Цепочка квестов / фракционный контент
+- ⭐⭐⭐⭐⭐ Система движка, Android, renderer, tooling
+
+### Как работать с AI
+
+1. Скопируй нужный шаблон из `templates/`
+2. Опиши желаемый контент обычным языком
+3. Попроси AI заполнить шаблон, не меняя формат API
+4. Проверь Lua-ошибки в игре
+5. Открой PR или issue
 
 ---
 
@@ -88,6 +111,9 @@ src/
 │   ├── render_tiles.c  — 2D tiles (Phase 2)
 │   ├── render_iso.c    — isometric (Phase 2)
 │   └── render_3d.c     — low-poly 3D (Phase 3)
+├── faction.c/h      — фракции и репутация
+├── npc.c/h          — NPC и диалоги
+├── quest.c/h        — квесты и стадии
 ├── texgen/
 │   ├── texgen.c/h   — procedural texture generator
 │   └── noise.c/h    — Perlin, Voronoi, Cellular noise
@@ -102,5 +128,12 @@ src/
 
 - Issues & discussions: GitHub Issues
 - Devlog: see `README.md` for links
+
+## Code of Conduct
+
+- Будь уважителен к новичкам и вайб-кодерам
+- Критикуй код и идею, а не человека
+- Не публикуй чужие приватные ассеты, ключи и секреты
+- Если не уверен — открой issue, а не спор
 
 *«В пепельных пустошах нет героев. Есть только те, кто ещё не сдался.»*

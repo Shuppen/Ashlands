@@ -72,6 +72,7 @@ ItemComponent      *entity_item(World *w, int id);
 bool entity_has_tag(const World *w, int id, const char *tag);
 void entity_add_tag(World *w, int id, const char *tag);
 void entity_rem_tag(World *w, int id, const char *tag);
+void entity_clear_tags(World *w, int id);
 
 /* =========================================================
  * Spatial query

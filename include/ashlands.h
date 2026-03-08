@@ -35,6 +35,7 @@
 
 #define MAX_INVENTORY_SLOTS 40
 #define MAX_RECIPE_INGREDIENTS 8
+#define SAVE_PATH_LEN 256
 
 /* =========================================================
  * Tile types
@@ -88,6 +89,8 @@ typedef struct {
     uint32_t fg_color;   /* RGBA packed */
     uint32_t bg_color;
     int sprite_id;
+    char texture_id[ITEM_NAME_LEN];
+    char mesh_id[ITEM_NAME_LEN];
 } RenderComponent;
 
 typedef struct {
@@ -124,6 +127,7 @@ typedef struct {
 
 /* Item-specific data */
 typedef struct {
+    char id[ITEM_NAME_LEN];
     char name[ITEM_NAME_LEN];
     int  type;
     int  value;

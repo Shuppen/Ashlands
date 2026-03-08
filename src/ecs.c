@@ -180,6 +180,12 @@ void entity_rem_tag(World *w, int id, const char *tag) {
     }
 }
 
+void entity_clear_tags(World *w, int id) {
+    if (!entity_is_alive(w, id)) return;
+    w->entities[id].tag_count = 0;
+    memset(w->entities[id].tags, 0, sizeof(w->entities[id].tags));
+}
+
 /* =========================================================
  * Spatial query
  * ========================================================= */
