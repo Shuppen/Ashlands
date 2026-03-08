@@ -200,8 +200,11 @@ git diff --check
 
 - Do not stop at local edits if the task is meant to be completed end-to-end.
 - After code changes, validate locally, commit, push, and inspect GitHub Actions.
+- After each push, wait long enough for workflows to start and emit useful status or logs; use a real pause such as `sleep 15` or `sleep 30` before the first check when needed.
+- After that initial wait, poll or watch the relevant workflows until they finish instead of stopping at the queued state.
 - If acting as a maintainer on the main repo, push to the expected upstream branch for the task.
 - If acting as a contributor, push to a separate branch or personal fork, not directly to upstream `main`.
 - Contributors must verify GitHub Actions on that branch or fork before handoff.
 - If CI fails, inspect logs, fix the issue, push again, and re-check runs.
+- Repeat the fix -> commit -> push -> sleep -> inspect cycle until all relevant builds are green or a real blocker remains.
 - In the final handoff, report the commit SHA, pushed branch, and Actions status.

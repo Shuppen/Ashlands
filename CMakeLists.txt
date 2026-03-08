@@ -15,6 +15,14 @@ find_package(OpenGL REQUIRED)
 find_library(SDL2_TTF_LIB NAMES SDL2_ttf)
 find_library(SDL2_IMAGE_LIB NAMES SDL2_image)
 find_library(SDL2_MIXER_LIB NAMES SDL2_mixer)
+find_path(SDL2_TTF_INCLUDE_DIR SDL_ttf.h
+    PATHS /usr/include
+          /usr/local/include
+          /opt/homebrew/include
+          /opt/homebrew/opt/sdl2_ttf/include
+          /ucrt64/include
+          /mingw64/include
+    PATH_SUFFIXES SDL2 SDL2_ttf)
 
 # LuaJIT
 find_library(LUAJIT_LIB NAMES luajit-5.1 luajit)
@@ -64,6 +72,10 @@ foreach(required_lib IN ITEMS SDL2_TTF_LIB SDL2_IMAGE_LIB SDL2_MIXER_LIB LUAJIT_
     endif()
 endforeach()
 
+if(NOT SDL2_TTF_INCLUDE_DIR)
+    message(FATAL_ERROR "Missing required dependency: SDL2_TTF_INCLUDE_DIR")
+endif()
+
 if(NOT LUAJIT_INCLUDE_DIR)
     message(FATAL_ERROR "Missing required dependency: LUAJIT_INCLUDE_DIR")
 endif()
@@ -102,6 +114,7 @@ add_executable(ashlands ${ASHLANDS_SOURCES})
 
 target_include_directories(ashlands PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${SDL2_TTF_INCLUDE_DIR}
     ${LUAJIT_INCLUDE_DIR}
 )
 

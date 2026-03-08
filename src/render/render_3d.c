@@ -196,7 +196,7 @@ static void render_3d_init(SDL_Window *win, int width, int height) {
     glDepthMask(GL_TRUE);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-#ifdef PLATFORM_WEB
+#if defined(PLATFORM_WEB) || defined(PLATFORM_ANDROID)
     glClearDepthf(1.0f);
 #else
     glClearDepth(1.0);
