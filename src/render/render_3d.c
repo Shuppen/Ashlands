@@ -2,6 +2,7 @@
 
 #include "shader.h"
 #include "render_3d_scene.h"
+#include "../../include/ashlands_gl.h"
 #include "../texgen/texgen.h"
 #include "../world.h"
 
@@ -180,6 +181,12 @@ static void render_3d_init(SDL_Window *win, int width, int height) {
 
     if (SDL_GL_MakeCurrent(win, s_3d.gl_context) != 0) {
         fprintf(stderr, "[render_3d] SDL_GL_MakeCurrent: %s\n", SDL_GetError());
+        render_3d_shutdown();
+        return;
+    }
+
+    if (!ashlands_gl_load()) {
+        fprintf(stderr, "[render_3d] failed to load OpenGL entry points\n");
         render_3d_shutdown();
         return;
     }

@@ -33,6 +33,7 @@ SRC_C := src/main.c \
          src/texgen/texgen.c \
          src/render/camera.c \
          src/render/mesh.c \
+         src/render/gl_api.c \
          src/render/render_3d_scene.c \
          src/render/shader.c \
          src/render/render_ascii.c \
@@ -74,10 +75,11 @@ web:
 	@touch assets/.keep mods/.keep
 	$(EMCC) $(SRC_C) -o $(WEB_DIR)/index.html \
 		-Iinclude \
-		--use-port=sdl2 \
-		--use-port=sdl2_ttf \
-		--use-port=sdl2_image:formats=png \
-		--use-port=sdl2_mixer \
+		-s USE_SDL=2 \
+		-s USE_SDL_TTF=2 \
+		-s USE_SDL_IMAGE=2 \
+		-s SDL2_IMAGE_FORMATS='["png"]' \
+		-s USE_SDL_MIXER=2 \
 		-s ALLOW_MEMORY_GROWTH=1 \
 		-s MAX_WEBGL_VERSION=2 \
 		-s MIN_WEBGL_VERSION=1 \

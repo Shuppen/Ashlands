@@ -11,16 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <SDL2/SDL.h>
-
-#ifdef PLATFORM_WEB
-#include <SDL2/SDL_opengles2.h>
-#else
-#ifndef GL_GLEXT_PROTOTYPES
-#define GL_GLEXT_PROTOTYPES
-#endif
-#include <SDL2/SDL_opengl.h>
-#endif
+#include "../../include/ashlands_gl.h"
 
 static float lerpf(float a, float b, float t) {
     return a + (b - a) * t;

@@ -2,8 +2,8 @@
 #include "ui.h"
 
 #ifndef PLATFORM_ANDROID
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+#include "../include/ashlands_sdl.h"
+#include "../include/ashlands_ttf.h"
 #endif
 
 #include <stdio.h>

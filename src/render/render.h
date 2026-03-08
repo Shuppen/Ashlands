@@ -8,8 +8,8 @@
 #ifndef ASHLANDS_RENDER_H
 #define ASHLANDS_RENDER_H
 
-#include <SDL2/SDL.h>
 #include "../../include/ashlands.h"
+#include "../../include/ashlands_sdl.h"
 
 /* Forward declarations */
 typedef struct WorldState WorldState;

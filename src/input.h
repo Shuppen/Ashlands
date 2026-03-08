@@ -6,7 +6,8 @@
 #define ASHLANDS_INPUT_H
 
 #include <stdbool.h>
-#include <SDL2/SDL.h>
+
+#include "../include/ashlands_sdl.h"
 
 /* =========================================================
  * Action abstraction — maps physical keys → game actions

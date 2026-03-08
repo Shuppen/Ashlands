@@ -1,18 +1,9 @@
 #include "texcache.h"
 
-#include <SDL2/SDL.h>
+#include "../../include/ashlands_gl.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef PLATFORM_WEB
-#include <SDL2/SDL_opengles2.h>
-#else
-#ifndef GL_GLEXT_PROTOTYPES
-#define GL_GLEXT_PROTOTYPES
-#endif
-#include <SDL2/SDL_opengl.h>
-#endif
 
 typedef struct TexCacheEntry {
     char *name;

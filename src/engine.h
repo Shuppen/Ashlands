@@ -6,7 +6,8 @@
 #define ASHLANDS_ENGINE_H
 
 #include <stdbool.h>
-#include <SDL2/SDL.h>
+
+#include "../include/ashlands_sdl.h"
 
 #include "../include/ashlands.h"
 #include "world.h"

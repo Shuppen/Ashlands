@@ -88,6 +88,7 @@ set(ASHLANDS_SOURCES
     src/texgen/texgen.c
     src/render/camera.c
     src/render/mesh.c
+    src/render/gl_api.c
     src/render/render_3d_scene.c
     src/render/shader.c
     src/render/render.c

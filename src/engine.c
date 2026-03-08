@@ -10,7 +10,6 @@
 #include "quest.h"
 #include "texgen/texgen.h"
 
-#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
